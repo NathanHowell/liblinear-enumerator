@@ -1,15 +1,15 @@
-name:                bindings-svm
+name:                bindings-linear
 version:             0.1.0
-synopsis:            Low level bindings to libsvm.
+synopsis:            Low level bindings to liblinear.
 description:
-  Low level bindings to libsvm <http://www.csie.ntu.edu.tw/~cjlin/libsvm/>.
+  Low level bindings to liblinear <http://www.csie.ntu.edu.tw/~cjlin/liblinear/>.
   .
 license:             BSD3
 license-file:        LICENSE
 author:              Paulo Tanimoto <ptanimoto@gmail.com>
 maintainer:          Paulo Tanimoto <ptanimoto@gmail.com>
-homepage:            http://github.com/tanimoto/bindings-svm
-bug-reports:         http://github.com/tanimoto/bindings-svm/issues
+homepage:            http://github.com/NathanHowell/bindings-linear
+bug-reports:         http://github.com/NathanHowell/bindings-linear/issues
 category:            FFI
 
 build-type:          Simple
@@ -19,7 +19,7 @@ library
   hs-source-dirs:
     src
   exposed-modules:
-    Bindings.SVM
+    Bindings.Linear
   build-depends:
     base         >= 3   && < 5,
     bindings-DSL >= 1.0 && < 1.1
@@ -28,8 +28,8 @@ library
   extensions:
     ForeignFunctionInterface
   includes:
-    svm.h
+    linear.h
   extra-libraries:
-    svm
-  pkgconfig-depends:
-    libsvm >= 2.8
+    linear
+--  pkgconfig-depends:
+--    liblinear >= 1.8
