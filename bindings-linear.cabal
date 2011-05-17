@@ -1,15 +1,15 @@
-name:                bindings-linear
+name:                liblinear-enumerator
 version:             0.1.0
-synopsis:            Low level bindings to liblinear.
+synopsis:            liblinear iteratee.
 description:
-  Low level bindings to liblinear <http://www.csie.ntu.edu.tw/~cjlin/liblinear/>.
+  High level bindings to liblinear <http://www.csie.ntu.edu.tw/~cjlin/liblinear/>.
   .
 license:             BSD3
 license-file:        LICENSE
-author:              Paulo Tanimoto <ptanimoto@gmail.com>
-maintainer:          Paulo Tanimoto <ptanimoto@gmail.com>
-homepage:            http://github.com/NathanHowell/bindings-linear
-bug-reports:         http://github.com/NathanHowell/bindings-linear/issues
+author:              Nathan Howell <nathan.d.howell@gmail.com>
+maintainer:          Nathan Howell <nathan.d.howell@gmail.com>
+homepage:            http://github.com/NathanHowell/liblinear-enumerator
+bug-reports:         http://github.com/NathanHowell/liblinear-enumerator/issues
 category:            FFI
 
 build-type:          Simple
@@ -19,10 +19,13 @@ library
   hs-source-dirs:
     src
   exposed-modules:
-    Bindings.Linear
+    Data.LibLinear
   build-depends:
-    base         >= 3   && < 5,
-    bindings-DSL >= 1.0 && < 1.1
+    base         >= 3      && < 5,
+    bindings-DSL >= 1.0    && < 1.1,
+    enumerator   >= 0.4.10 && < 0.5,
+    mtl          >= 2      && < 3,
+    array        >= 0.3    && < 0.4
   ghc-options:
     -Wall
   extensions:
@@ -31,5 +34,3 @@ library
     linear.h
   extra-libraries:
     linear
---  pkgconfig-depends:
---    liblinear >= 1.8
