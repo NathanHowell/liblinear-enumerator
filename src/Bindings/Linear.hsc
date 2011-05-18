@@ -1,7 +1,7 @@
 {-|
 For a high-level description of the C API, refer to the README file
-included in the libsvm archive, available for download at
-<http://www.csie.ntu.edu.tw/~cjlin/libsvm/>.
+included in the liblinear archive, available for download at
+<http://www.csie.ntu.edu.tw/~cjlin/liblinear/>.
 -}
 
 #include <bindings.dsl.h>
@@ -9,9 +9,6 @@ included in the libsvm archive, available for download at
 
 module Bindings.Linear where
 #strict_import
-
--- libsvm_version
-#globalvar libsvm_version , CInt
 
 -- feature_node
 #starttype struct feature_node
@@ -56,8 +53,6 @@ module Bindings.Linear where
 #field label , Ptr CInt
 #field bias , CDouble
 #stoptype
-
-#opaque_t unused_model
 
 -- training
 #ccall train , Ptr <problem> -> Ptr <parameter> -> IO (Ptr <model>)
