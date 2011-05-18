@@ -9,11 +9,14 @@ module Data.LibLinear
   ) where
 
 import Bindings.Linear
+import Control.Monad (liftM)
 import Control.Monad.Trans (liftIO)
-import Data.Array.Storable as DAS
 import Data.Enumerator as E
 import Data.Enumerator.List as EL
 import Data.List as L
+-- import qualified Data.Vector.Storable as Vec
+import qualified Data.Vector.Storable.Mutable as MVec
+import Foreign as F
 import Foreign.C.Types
 import Foreign.Marshal as FM
 import Foreign.Ptr
@@ -56,8 +59,8 @@ instance Enum Solver where
            | v == c'L2R_LR_DUAL         = L2R_LR_DUAL
            | otherwise                  = maxBound
 
-exampleToNodeList :: Example -> IO (Ptr C'feature_node)
-exampleToNodeList (Example _ features) = FM.newArray $ L.map mapper features ++ [sentintel]
+featuresToNodeList :: [Feature] -> IO (Ptr C'feature_node)
+featuresToNodeList features = FM.newArray $ L.map mapper features ++ [sentintel]
   where mapper (Feature i v) = C'feature_node
           { c'feature_node'index = fromIntegral i
           , c'feature_node'value = realToFrac v }
@@ -73,23 +76,35 @@ newParameter solver = C'parameter
   , c'parameter'weight = nullPtr
   }
 
+writeByIndex :: MVec.IOVector CDouble
+             -> MVec.IOVector (Ptr C'feature_node)
+             -> Int
+             -> Example
+             -> IO Int
+writeByIndex targets features = \ i (Example t f) -> do
+  MVec.write features i =<< featuresToNodeList f 
+  MVec.write targets i $! realToFrac t
+  return $! i+1
+
+convertModel :: C'model -> Model
+convertModel model = undefined
+
 train :: Int -> Solver -> Iteratee Example IO Model 
 train exampleCount solver = do
-  targets :: StorableArray Int CDouble <- liftIO $ newArray_ (0, exampleCount)
-  features :: StorableArray Int (Ptr C'feature_node) <- liftIO $ newArray_ (0, exampleCount)
-  Just e@(Example target _) <- EL.head
-  liftIO $ writeArray targets 0 (realToFrac target)
-  -- features <- liftIO $ exampleToNodeList e
-  model <- liftIO $ withStorableArray targets $ \ targets' -> do
-           withStorableArray features $ \ features' -> do
-             let problem = C'problem
-                   { c'problem'l = fromIntegral exampleCount
-                   , c'problem'y = targets'
-                   , c'problem'x = features'
-                   , c'problem'bias = (-1.0)
-                   }
-                 problem' = undefined
-                 param' = undefined
-             c'train problem' param'
-  undefined
+  targets  <- liftIO $ MVec.new exampleCount
+  features <- liftIO $ MVec.new exampleCount
+  _ <- EL.foldM (writeByIndex targets features) 0
+  liftIO $
+    MVec.unsafeWith targets  $ \ targets'  -> do
+    MVec.unsafeWith features $ \ features' -> do
+      let problem = C'problem
+            { c'problem'l = fromIntegral exampleCount
+            , c'problem'y = targets'
+            , c'problem'x = features'
+            , c'problem'bias = (-1.0)
+            }
+      model <- with problem $ \ problem' ->
+        with (newParameter solver) $ \ param' ->
+          c'train problem' param'
+      return . convertModel =<< F.peek model
 

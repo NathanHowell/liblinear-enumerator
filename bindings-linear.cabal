@@ -19,13 +19,14 @@ library
   hs-source-dirs:
     src
   exposed-modules:
+    Bindings.Linear
     Data.LibLinear
   build-depends:
     base         >= 3      && < 5,
     bindings-DSL >= 1.0    && < 1.1,
     enumerator   >= 0.4.10 && < 0.5,
     mtl          >= 2      && < 3,
-    array        >= 0.3    && < 0.4
+    vector       >= 0.7    && < 0.8
   ghc-options:
     -Wall
   extensions:
