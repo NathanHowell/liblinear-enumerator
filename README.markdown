@@ -1,14 +1,14 @@
-bindings-svm
+liblinear-enumerator
 ============
 
-This package provides low level bindings to [libsvm][] for Haskell using [bindings-DSL][].  libsvm is a popular C++ library for Support Vector Machines, providing both classification and regression models.
+This package provides bindings to [liblinear][] for Haskell using the excellent [enumerator][] library and [bindings-DSL][]. 
 
 
 Installation
 ============
 
     cabal update
-    cabal install bindings-svm
+    cabal install liblinear-enumerator
 
 
 Bug Reports
@@ -20,9 +20,12 @@ You can report bugs at the [issue tracker][].
 Acknowledgements
 ================
 
-Special thanks are due to Mauricio Antunes for his guidance in creating these bindings.
+Initially forked from [bindings-svm][] from Paulo Tanimoto
 
 
 [libsvm]: http://www.csie.ntu.edu.tw/~cjlin/libsvm/
+[liblinear]: http://www.csie.ntu.edu.tw/~cjlin/liblinear/
 [bindings-DSL]: http://hackage.haskell.org/package/bindings-DSL
-[issue tracker]: http://github.com/tanimoto/bindings-svm/issues
+[bindings-svm]: https://github.com/tanimoto/bindings-svm
+[enumerator]: https://john-millikin.com/software/enumerator/
+[issue tracker]: https://github.com/NathanHowell/liblinear-enumerator/issues
