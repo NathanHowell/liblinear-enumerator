@@ -9,17 +9,13 @@ module Data.LibLinear
   ) where
 
 import Bindings.Linear
-import Control.Monad (liftM)
 import Control.Monad.Trans (liftIO)
 import Data.Enumerator as E
-import Data.Enumerator.List as EL
-import Data.List as L
--- import qualified Data.Vector.Storable as Vec
+import qualified Data.Enumerator.List as EL
+import qualified Data.List as L
 import qualified Data.Vector.Storable.Mutable as MVec
 import Foreign as F
 import Foreign.C.Types
-import Foreign.Marshal as FM
-import Foreign.Ptr
 
 data Model = Model deriving (Show)
 data Feature = Feature !Int !Double deriving (Show)
@@ -60,7 +56,7 @@ instance Enum Solver where
            | otherwise                  = maxBound
 
 featuresToNodeList :: [Feature] -> IO (Ptr C'feature_node)
-featuresToNodeList features = FM.newArray $ L.map mapper features ++ [sentintel]
+featuresToNodeList features = F.newArray $ L.map mapper features ++ [sentintel]
   where mapper (Feature i v) = C'feature_node
           { c'feature_node'index = fromIntegral i
           , c'feature_node'value = realToFrac v }
@@ -78,13 +74,14 @@ newParameter solver = C'parameter
 
 writeByIndex :: MVec.IOVector CDouble
              -> MVec.IOVector (Ptr C'feature_node)
-             -> Int
+             -> (Int, Int)
              -> Example
-             -> IO Int
-writeByIndex targets features = \ i (Example t f) -> do
+             -> IO (Int, Int)
+writeByIndex targets features = \ (i,fm) e@(Example t f) -> do
+  let nfm = L.maximum $ L.map (\ (Feature i _) -> i) f
   MVec.write features i =<< featuresToNodeList f 
   MVec.write targets i $! realToFrac t
-  return $! i+1
+  return $! (i+1, max fm nfm)
 
 convertModel :: C'model -> Model
 convertModel model = undefined
@@ -93,12 +90,15 @@ train :: Int -> Solver -> Iteratee Example IO Model
 train exampleCount solver = do
   targets  <- liftIO $ MVec.new exampleCount
   features <- liftIO $ MVec.new exampleCount
-  _ <- EL.foldM (writeByIndex targets features) 0
-  liftIO $
+  (countedTargets, featureMax) <- EL.foldM (writeByIndex targets features) (0,0)
+  if (exampleCount /= countedTargets)
+    then fail $! "target mismatch: " ++ show exampleCount ++ " != " ++ show countedTargets
+    else liftIO $
     MVec.unsafeWith targets  $ \ targets'  -> do
     MVec.unsafeWith features $ \ features' -> do
       let problem = C'problem
             { c'problem'l = fromIntegral exampleCount
+            , c'problem'n = fromIntegral featureMax
             , c'problem'y = targets'
             , c'problem'x = features'
             , c'problem'bias = (-1.0)

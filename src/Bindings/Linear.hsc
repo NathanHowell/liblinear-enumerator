@@ -19,6 +19,7 @@ module Bindings.Linear where
 -- problem
 #starttype struct problem
 #field l , CInt
+#field n , CInt
 #field y , Ptr CDouble
 #field x , Ptr (Ptr <feature_node>)
 #field bias , CDouble
