@@ -77,7 +77,7 @@ writeByIndex :: MVec.IOVector CDouble
              -> (Int, Int)
              -> Example
              -> IO (Int, Int)
-writeByIndex targets features = \ (i,fm) (Example t f) -> do
+writeByIndex targets features (i,fm) (Example t f) = do
   let nfm = L.maximum [fi | Feature fi _ <- f]
   MVec.write features i =<< featuresToNodeList f 
   MVec.write targets i $! realToFrac t
@@ -91,17 +91,17 @@ train exampleCount solver = do
   targets  <- liftIO $ MVec.new exampleCount
   features <- liftIO $ MVec.new exampleCount
   (countedTargets, featureMax) <- EL.foldM (writeByIndex targets features) (0,0)
-  if (exampleCount /= countedTargets)
+  if exampleCount /= countedTargets
     then fail $! "target mismatch: " ++ show exampleCount ++ " != " ++ show countedTargets
     else liftIO $
-      MVec.unsafeWith targets  $ \ targets'  -> do
+      MVec.unsafeWith targets  $ \ targets'  ->
       MVec.unsafeWith features $ \ features' -> do
 	let problem = C'problem
 	      { c'problem'l = fromIntegral exampleCount
 	      , c'problem'n = fromIntegral featureMax
 	      , c'problem'y = targets'
 	      , c'problem'x = features'
-	      , c'problem'bias = (-1.0)
+	      , c'problem'bias = -1.0
 	      }
 	model <- with problem $ \ problem' ->
 	  with (newParameter solver) $ \ param' ->
