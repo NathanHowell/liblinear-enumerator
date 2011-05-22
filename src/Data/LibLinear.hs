@@ -1,14 +1,16 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 module Data.LibLinear
   ( Model(..)
   , Feature(..)
   , Example(..)
   , Solver(..)
+  , TrainParams(..)
   , train
   ) where
 
 import Bindings.LibLinear
+import Control.Monad (forM_)
 import Control.Monad.Trans (liftIO)
 import Data.Enumerator as E
 import qualified Data.Enumerator.List as EL
@@ -55,8 +57,8 @@ instance Enum Solver where
            | v == c'L2R_LR_DUAL         = L2R_LR_DUAL
            | otherwise                  = maxBound
 
-featuresToNodeList :: [Feature] -> IO (Ptr C'feature_node)
-featuresToNodeList features = F.newArray $ L.map mapper features ++ [sentintel]
+featuresToNodeList :: [Feature] -> [C'feature_node]
+featuresToNodeList features = L.map mapper features ++ [sentintel]
   where mapper (Feature i v) = C'feature_node
           { c'feature_node'index = fromIntegral i
           , c'feature_node'value = realToFrac v }
@@ -73,38 +75,54 @@ newParameter solver = C'parameter
   }
 
 writeByIndex :: MVec.IOVector CDouble
+             -> MVec.IOVector C'feature_node
              -> MVec.IOVector (Ptr C'feature_node)
-             -> (Int, Int)
+             -> (Int, Int, Int)
              -> Example
-             -> IO (Int, Int)
-writeByIndex targets features (i,fm) (Example t f) = do
-  let nfm = L.maximum [fi | Feature fi _ <- f]
-  MVec.write features i =<< featuresToNodeList f 
+             -> IO (Int, Int, Int)
+writeByIndex targets features featureIndex (i, fMax, fSum) (Example t f) = do
+  let fMax' = L.maximum [fi | Feature fi _ <- f]
+  -- MVec.write featureIndex i =<< featuresToNodeList f 
+  print i
   MVec.write targets i $! realToFrac t
-  return $! (i+1, max fm nfm)
+  forM_ (zip [fSum..] (featuresToNodeList f)) ( \ row@(fi, feature) -> do
+    print row
+    MVec.write features fi feature)
+  MVec.unsafeWith features ( \ basePtr -> do
+    let addr = basePtr `plusPtr` (fSum * sizeOf (undefined :: C'feature_node))
+    print addr
+    MVec.write featureIndex i addr)
+  return $! (i+1, max fMax fMax', fSum+L.length f+1)
 
 convertModel :: C'model -> Model
 convertModel model = undefined
 
-train :: Int -> Solver -> Iteratee Example IO Model 
-train exampleCount solver = do
-  targets  <- liftIO $ MVec.new exampleCount
-  features <- liftIO $ MVec.new exampleCount
-  (countedTargets, featureMax) <- EL.foldM (writeByIndex targets features) (0,0)
-  if exampleCount /= countedTargets
-    then fail $! "target mismatch: " ++ show exampleCount ++ " != " ++ show countedTargets
+data TrainParams = TrainParams
+  { trainSolver :: Solver
+  , trainExamples :: Int
+  , trainFeatureSum :: Int
+  } deriving (Show)
+
+train :: TrainParams -> Iteratee Example IO Model 
+train TrainParams{trainSolver, trainExamples, trainFeatureSum} = do
+  targets <- liftIO $ MVec.new trainExamples
+  featureIndex <- liftIO $ MVec.new trainExamples
+  features <- liftIO $ MVec.new (trainFeatureSum + trainExamples) -- allocate space for sentinel
+  (targetCount, featureMax, featureSum) <- EL.foldM (writeByIndex targets features featureIndex) (0, 0, 0)
+  if trainExamples /= targetCount
+    then fail $! "target mismatch: " ++ show trainExamples ++ " != " ++ show targetCount
     else liftIO $
-      MVec.unsafeWith targets  $ \ targets'  ->
-      MVec.unsafeWith features $ \ features' -> do
+      MVec.unsafeWith targets $ \ targets'  ->
+      MVec.unsafeWith featureIndex $ \ features' -> do
 	let problem = C'problem
-	      { c'problem'l = fromIntegral exampleCount
+	      { c'problem'l = fromIntegral trainExamples
 	      , c'problem'n = fromIntegral featureMax
 	      , c'problem'y = targets'
 	      , c'problem'x = features'
 	      , c'problem'bias = -1.0
 	      }
 	model <- with problem $ \ problem' ->
-	  with (newParameter solver) $ \ param' ->
-	    c'train problem' param'
+	         with (newParameter trainSolver) $ \ param' ->
+	           c'train problem' param'
 	return . convertModel =<< F.peek model
 
