@@ -8,7 +8,7 @@ module Data.LibLinear
   , train
   ) where
 
-import Bindings.Linear
+import Bindings.LibLinear
 import Control.Monad.Trans (liftIO)
 import Data.Enumerator as E
 import qualified Data.Enumerator.List as EL
@@ -77,8 +77,8 @@ writeByIndex :: MVec.IOVector CDouble
              -> (Int, Int)
              -> Example
              -> IO (Int, Int)
-writeByIndex targets features = \ (i,fm) e@(Example t f) -> do
-  let nfm = L.maximum $ L.map (\ (Feature i _) -> i) f
+writeByIndex targets features = \ (i,fm) (Example t f) -> do
+  let nfm = L.maximum [fi | Feature fi _ <- f]
   MVec.write features i =<< featuresToNodeList f 
   MVec.write targets i $! realToFrac t
   return $! (i+1, max fm nfm)
@@ -94,17 +94,17 @@ train exampleCount solver = do
   if (exampleCount /= countedTargets)
     then fail $! "target mismatch: " ++ show exampleCount ++ " != " ++ show countedTargets
     else liftIO $
-    MVec.unsafeWith targets  $ \ targets'  -> do
-    MVec.unsafeWith features $ \ features' -> do
-      let problem = C'problem
-            { c'problem'l = fromIntegral exampleCount
-            , c'problem'n = fromIntegral featureMax
-            , c'problem'y = targets'
-            , c'problem'x = features'
-            , c'problem'bias = (-1.0)
-            }
-      model <- with problem $ \ problem' ->
-        with (newParameter solver) $ \ param' ->
-          c'train problem' param'
-      return . convertModel =<< F.peek model
+      MVec.unsafeWith targets  $ \ targets'  -> do
+      MVec.unsafeWith features $ \ features' -> do
+	let problem = C'problem
+	      { c'problem'l = fromIntegral exampleCount
+	      , c'problem'n = fromIntegral featureMax
+	      , c'problem'y = targets'
+	      , c'problem'x = features'
+	      , c'problem'bias = (-1.0)
+	      }
+	model <- with problem $ \ problem' ->
+	  with (newParameter solver) $ \ param' ->
+	    c'train problem' param'
+	return . convertModel =<< F.peek model
 

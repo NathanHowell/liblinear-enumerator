@@ -19,7 +19,7 @@ library
   hs-source-dirs:
     src
   exposed-modules:
-    Bindings.Linear
+    Bindings.LibLinear
     Data.LibLinear
   build-depends:
     base         >= 3      && < 5,

@@ -7,7 +7,7 @@ included in the liblinear archive, available for download at
 #include <bindings.dsl.h>
 #include <linear.h>
 
-module Bindings.Linear where
+module Bindings.LibLinear where
 #strict_import
 
 -- feature_node
