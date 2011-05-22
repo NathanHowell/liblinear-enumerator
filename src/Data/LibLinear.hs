@@ -15,6 +15,7 @@ import Control.Monad.Trans (liftIO)
 import Data.Enumerator as E
 import qualified Data.Enumerator.List as EL
 import qualified Data.List as L
+import Data.LibLinear.Solver
 import qualified Data.Vector.Storable.Mutable as MVec
 import Foreign as F
 import Foreign.C.Types
@@ -22,40 +23,6 @@ import Foreign.C.Types
 data Model = Model deriving (Show)
 data Feature = Feature !Int !Double deriving (Show)
 data Example = Example !Double [Feature] deriving (Show)
-
-data Solver
-  = L2R_LR
-  | L2R_L2LOSS_SVC_DUAL
-  | L2R_L2LOSS_SVC
-  | L2R_L1LOSS_SVC_DUAL
-  | MCSVM_CS
-  | L1R_L2LOSS_SVC
-  | L1R_LR
-  | L2R_LR_DUAL
-    deriving (Show, Eq)
-
-instance Bounded Solver where
-  minBound = L2R_LR
-  maxBound = L2R_LR_DUAL
-
-instance Enum Solver where
-  fromEnum L2R_LR              = c'L2R_LR
-  fromEnum L2R_L2LOSS_SVC_DUAL = c'L2R_L2LOSS_SVC_DUAL
-  fromEnum L2R_L2LOSS_SVC      = c'L2R_L2LOSS_SVC
-  fromEnum L2R_L1LOSS_SVC_DUAL = c'L2R_L1LOSS_SVC_DUAL
-  fromEnum MCSVM_CS            = c'MCSVM_CS
-  fromEnum L1R_L2LOSS_SVC      = c'L1R_L2LOSS_SVC
-  fromEnum L1R_LR              = c'L1R_LR
-  fromEnum L2R_LR_DUAL         = c'L2R_LR_DUAL
-  toEnum v | v <= c'L2R_LR              = L2R_LR
-           | v == c'L2R_L2LOSS_SVC_DUAL = L2R_L2LOSS_SVC_DUAL
-           | v == c'L2R_L2LOSS_SVC      = L2R_L2LOSS_SVC
-           | v == c'L2R_L1LOSS_SVC_DUAL = L2R_L1LOSS_SVC_DUAL
-           | v == c'MCSVM_CS            = MCSVM_CS
-           | v == c'L1R_L2LOSS_SVC      = L1R_L2LOSS_SVC
-           | v == c'L1R_LR              = L1R_LR
-           | v == c'L2R_LR_DUAL         = L2R_LR_DUAL
-           | otherwise                  = maxBound
 
 featuresToNodeList :: [Feature] -> [C'feature_node]
 featuresToNodeList features = L.map mapper features ++ [sentintel]
@@ -82,15 +49,11 @@ writeByIndex :: MVec.IOVector CDouble
              -> IO (Int, Int, Int)
 writeByIndex targets features featureIndex (i, fMax, fSum) (Example t f) = do
   let fMax' = L.maximum [fi | Feature fi _ <- f]
-  -- MVec.write featureIndex i =<< featuresToNodeList f 
-  print i
   MVec.write targets i $! realToFrac t
   forM_ (zip [fSum..] (featuresToNodeList f)) ( \ row@(fi, feature) -> do
-    print row
     MVec.write features fi feature)
   MVec.unsafeWith features ( \ basePtr -> do
     let addr = basePtr `plusPtr` (fSum * sizeOf (undefined :: C'feature_node))
-    print addr
     MVec.write featureIndex i addr)
   return $! (i+1, max fMax fMax', fSum+L.length f+1)
 
