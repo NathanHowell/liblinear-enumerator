@@ -7,12 +7,13 @@ module Data.LibLinear
   , Feature(..)
   , Example(..)
   , Solver(..)
+  , Target(..)
   , TrainParams(..)
   , train
   ) where
 
 import Bindings.LibLinear
-import Control.Monad (forM_)
+import Control.Monad (forM_, liftM2)
 import Control.Monad.Trans (liftIO)
 import Data.Enumerator as E hiding (sequence)
 import qualified Data.Enumerator.List as EL
@@ -23,7 +24,7 @@ import qualified Data.Vector.Storable.Mutable as MVec
 import Foreign as F
 import Foreign.C.Types
 
-newtype Target = Target Int deriving (Show, Eq, Num, Ord, Integral, Real, Enum)
+newtype Target = Target Int deriving (Show, Eq, Enum)
 
 data Model = Model !Target (SVec.Vector Double) deriving (Show)
 data Feature = Feature !Int !Double deriving (Show)
@@ -57,7 +58,7 @@ writeByIndex targets features featureIndex (i, fMax, fSum) (Example (Target t) f
   MVec.write targets i $ fromIntegral t
   forM_ (zip [fSum..] (featuresToNodeList f)) ( \ (fi, feature) -> MVec.write features fi feature)
   MVec.unsafeWith features ( \ basePtr -> do
-    let addr = basePtr `plusPtr` (fSum * sizeOf (undefined :: C'feature_node))
+    let addr = basePtr `advancePtr` fSum
     MVec.write featureIndex i addr)
   return $! (i+1, max fMax fMax', fSum+L.length f+1)
 
@@ -74,17 +75,14 @@ convertModel C'model
         step i | nr_class' == 2, i == 1 = Nothing
                | i < nr_class'          = Just (model, i+1)
                | otherwise              = Nothing
-          where target = peekElemOff label i >>= newTarget
+          where model = liftM2 Model target weightVec
+                target = peekElemOff label i >>= newTarget
                 newTarget = return . Target . fromIntegral
-                weights = do
-                  let wd = castPtr w
-                  wx <- newForeignPtr_ wd
-                  -- XXX/TODO: index by model
-                  SVec.freeze $! MVec.MVector wd nr_feature' wx
-                model = do
-                  target' <- target
-                  weights' <- weights
-                  return $! Model target' weights'
+                weightVec = do
+                  let weights = castPtr w
+                      modelWeights = weights `advancePtr` i
+                  ptr <- newForeignPtr_ weights
+                  SVec.freeze $! MVec.MVector modelWeights nr_feature' ptr
 
 data TrainParams = TrainParams
   { trainSolver :: Solver
