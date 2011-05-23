@@ -42,5 +42,5 @@ main = withFile "heart_scale" ReadMode go where
     let params = TrainParams {trainSolver = L2R_LR, trainExamples = rows, trainFeatureSum = features}
     print params
     Right model <- E.run $ ET.enumHandle h E.$$ xform E.=$ train params
-    print rows
+    print model
 
