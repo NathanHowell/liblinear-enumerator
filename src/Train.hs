@@ -18,7 +18,7 @@ countLines = EB.fold step (0, 0)
 
 lineToExample :: Text -> Example
 lineToExample a = Example target features
-  where Right (target, _) = TR.double t
+  where Right (target, _) = TR.signed TR.decimal t
         features = L.map tokenToFeature f
         t:f = T.words a
 

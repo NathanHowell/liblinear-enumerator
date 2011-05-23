@@ -20,7 +20,7 @@ module Bindings.LibLinear where
 #starttype struct problem
 #field l , CInt
 #field n , CInt
-#field y , Ptr CDouble
+#field y , Ptr CInt
 #field x , Ptr (Ptr <feature_node>)
 #field bias , CDouble
 #stoptype

@@ -22,7 +22,7 @@ import Foreign.C.Types
 
 data Model = Model deriving (Show)
 data Feature = Feature !Int !Double deriving (Show)
-data Example = Example !Double [Feature] deriving (Show)
+data Example = Example !Int [Feature] deriving (Show)
 
 featuresToNodeList :: [Feature] -> [C'feature_node]
 featuresToNodeList features = L.map mapper features ++ [sentintel]
@@ -41,7 +41,7 @@ newParameter solver = C'parameter
   , c'parameter'weight = nullPtr
   }
 
-writeByIndex :: MVec.IOVector CDouble
+writeByIndex :: MVec.IOVector CInt
              -> MVec.IOVector C'feature_node
              -> MVec.IOVector (Ptr C'feature_node)
              -> (Int, Int, Int)
@@ -49,9 +49,8 @@ writeByIndex :: MVec.IOVector CDouble
              -> IO (Int, Int, Int)
 writeByIndex targets features featureIndex (i, fMax, fSum) (Example t f) = do
   let fMax' = L.maximum [fi | Feature fi _ <- f]
-  MVec.write targets i $! realToFrac t
-  forM_ (zip [fSum..] (featuresToNodeList f)) ( \ row@(fi, feature) -> do
-    MVec.write features fi feature)
+  MVec.write targets i $ fromIntegral t
+  forM_ (zip [fSum..] (featuresToNodeList f)) ( \ (fi, feature) -> MVec.write features fi feature)
   MVec.unsafeWith features ( \ basePtr -> do
     let addr = basePtr `plusPtr` (fSum * sizeOf (undefined :: C'feature_node))
     MVec.write featureIndex i addr)
@@ -74,18 +73,21 @@ train TrainParams{trainSolver, trainExamples, trainFeatureSum} = do
   (targetCount, featureMax, featureSum) <- EL.foldM (writeByIndex targets features featureIndex) (0, 0, 0)
   if trainExamples /= targetCount
     then fail $! "target mismatch: " ++ show trainExamples ++ " != " ++ show targetCount
-    else liftIO $
-      MVec.unsafeWith targets $ \ targets'  ->
-      MVec.unsafeWith featureIndex $ \ features' -> do
-	let problem = C'problem
-	      { c'problem'l = fromIntegral trainExamples
-	      , c'problem'n = fromIntegral featureMax
-	      , c'problem'y = targets'
-	      , c'problem'x = features'
-	      , c'problem'bias = -1.0
-	      }
-	model <- with problem $ \ problem' ->
-	         with (newParameter trainSolver) $ \ param' ->
-	           c'train problem' param'
-	return . convertModel =<< F.peek model
+    else liftIO $ do
+      let (featureBuffer, _, _) = MVec.unsafeToForeignPtr features
+      withForeignPtr featureBuffer $ \ _ ->
+        MVec.unsafeWith targets $ \ targets'  ->
+        MVec.unsafeWith featureIndex $ \ features' -> do
+          print featureBuffer
+	  let problem = C'problem
+	        { c'problem'l = fromIntegral trainExamples
+	        , c'problem'n = fromIntegral featureMax
+	        , c'problem'y = targets'
+	        , c'problem'x = features'
+	        , c'problem'bias = -1.0
+	        }
+	  model <- with problem $ \ problem' ->
+	           with (newParameter trainSolver) $ \ param' ->
+	             c'train problem' param'
+	  return . convertModel =<< F.peek model
 
