@@ -1,6 +1,9 @@
+{-# LANGUAGE DeriveDataTypeable #-}
+
 module Data.LibLinear.Solver (Solver(..)) where
 
 import Bindings.LibLinear
+import Data.Data
 
 data Solver
   = L2R_LR
@@ -11,7 +14,7 @@ data Solver
   | L1R_L2LOSS_SVC
   | L1R_LR
   | L2R_LR_DUAL
-    deriving (Show, Eq)
+    deriving (Show, Eq, Data, Typeable)
 
 instance Bounded Solver where
   minBound = L2R_LR
