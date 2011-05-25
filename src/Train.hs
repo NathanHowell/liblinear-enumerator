@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Main (main) where
 
@@ -24,8 +25,11 @@ data TrainOpts = TrainOpts
   , optWeights     :: [Double]
   , optXValidation :: Maybe Int
   , optQuiet       :: Bool
+  , optInput       :: String
+  , optOutput      :: String
   } deriving (Show, Data, Typeable)
 
+argz :: TrainOpts
 argz = TrainOpts
   { optSolver = L2R_L2LOSS_SVC_DUAL
                          &= explicit &= name "s" &= name "solver"
@@ -42,6 +46,10 @@ argz = TrainOpts
                          &= help "n-fold cross validation mode"
   , optQuiet = False     &= explicit &= name "q" &= name "quiet"
                          &= help "quiet mode (no outputs)"
+  , optInput = def       &= argPos 0
+                         &= typ "training_set_file"
+  , optOutput = def      &= argPos 1 &= opt "" 
+                         &= typ "model_file"
   }
 
 setEpsDefault :: TrainOpts -> TrainOpts
@@ -102,13 +110,13 @@ xform (Continue k) = continue go
   
 main :: IO ()
 main = do
-  argz' <- cmdArgs argz
-  withFile "heart_scale" ReadMode go where
-    go h = do
-      Right (rows, features) <- E.run $ EB.enumHandle 4096 h E.$$ countLines
-      hSeek h AbsoluteSeek 0
-      let params = TrainParams {trainSolver = L2R_LR, trainExamples = rows, trainFeatureSum = features}
-      print params
-      Right model <- E.run $ ET.enumHandle h E.$$ xform E.=$ train params
-      print model
+  to <- cmdArgs argz
+  let to' = setEpsDefault to
+  withFile (optInput to') ReadMode $ \ h -> do
+    Right (rows, features) <- E.run $ EB.enumHandle 4096 h E.$$ countLines
+    hSeek h AbsoluteSeek 0
+    let params = TrainParams {trainSolver = optSolver to', trainExamples = rows, trainFeatureSum = features}
+    print params
+    Right model <- E.run $ ET.enumHandle h E.$$ xform E.=$ train params
+    print model
 
