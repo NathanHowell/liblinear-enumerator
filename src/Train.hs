@@ -64,25 +64,11 @@ setEpsDefault to@TrainOpts{optSolver, optEpsilon = Nothing} =
         L1R_L2LOSS_SVC      -> case3
         L1R_LR              -> case3
   in to{optEpsilon = Just $! eps}
-  -- XXX/TODO: estimate values at runtime
   where case1 = 0.01
         case2 = 0.1
         case3 = 0.01
 
 setEpsDefault to = to
-
-{--
-	"-e epsilon : set tolerance of termination criterion\n"
-	"	-s 0 and 2\n"
-	"		|f'(w)|_2 <= eps*min(pos,neg)/l*|f'(w0)|_2,\n"
-	"		where f is the primal function and pos/neg are # of\n"
-	"		positive/negative data (default 0.01)\n"
-	"	-s 1, 3, 4 and 7\n"
-	"		Dual maximal violation <= eps; similar to libsvm (default 0.1)\n"
-	"	-s 5 and 6\n"
-	"		|f'(w)|_1 <= eps*min(pos,neg)/l*|f'(w0)|_1,\n"
-	"		where f is the primal function (default 0.01)\n"
---}
 
 countLines :: Iteratee B.ByteString IO (Int, Int)
 countLines = EB.fold step (0, 0)
@@ -110,13 +96,15 @@ xform (Continue k) = continue go
   
 main :: IO ()
 main = do
-  to <- cmdArgs argz
+  to@TrainOpts{..} <- cmdArgs argz
   let to' = setEpsDefault to
-  withFile (optInput to') ReadMode $ \ h -> do
-    Right (rows, features) <- E.run $ EB.enumHandle 4096 h E.$$ countLines
-    hSeek h AbsoluteSeek 0
-    let params = TrainParams {trainSolver = optSolver to', trainExamples = rows, trainFeatureSum = features}
+      output' = if optOutput == "" then optInput ++ ".model" else optOutput
+  withFile optInput ReadMode $ \ hIn -> do
+  withFile output' WriteMode $ \ hOut -> do
+    Right (rows, features) <- E.run $ EB.enumHandle 4096 hIn E.$$ countLines
+    hSeek hIn AbsoluteSeek 0
+    let params = TrainParams {trainSolver = optSolver, trainExamples = rows, trainFeatureSum = features}
     print params
-    Right model <- E.run $ ET.enumHandle h E.$$ xform E.=$ train params
-    print model
+    Right model <- E.run $ ET.enumHandle hIn E.$$ xform E.=$ train params
+    hPrint hOut model
 
