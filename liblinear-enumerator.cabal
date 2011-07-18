@@ -21,6 +21,8 @@ library
   exposed-modules:
     Bindings.LibLinear
     Data.LibLinear
+  other-modules:
+    Data.LibLinear.Solver
   build-depends:
     base         >= 3      && < 5,
     bindings-DSL >= 1.0    && < 1.1,
@@ -36,8 +38,18 @@ library
     cbits/
   install-includes:
     cbits/linear.h
+    cbits/tron.h
+    cbits/blas/blas.h
+    cbits/blas/blasp.h
+    
   c-sources:
     cbits/linear.cpp
+    cbits/tron.cpp
+    cbits/blas/daxpy.c	
+    cbits/blas/dnrm2.c
+    cbits/blas/ddot.c	
+    cbits/blas/dscal.c
+    
   includes:
     cbits/linear.h
   extra-libraries:
