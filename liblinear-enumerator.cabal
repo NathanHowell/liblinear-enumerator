@@ -1,5 +1,5 @@
-name:                liblinear-enumerator
-version:             0.1.0
+name:                liblinear-enumerator-a
+version:             0.1.1
 synopsis:            liblinear iteratee.
 description:
   High level bindings to liblinear <http://www.csie.ntu.edu.tw/~cjlin/liblinear/>.
@@ -31,7 +31,14 @@ library
     -Wall
   extensions:
     ForeignFunctionInterface
+
+  include-dirs:
+    cbits/
+  install-includes:
+    cbits/linear.h
+  c-sources:
+    cbits/linear.cpp
   includes:
-    linear.h
+    cbits/linear.h
   extra-libraries:
-    linear
+    stdc++
