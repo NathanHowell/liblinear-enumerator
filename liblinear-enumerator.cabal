@@ -1,5 +1,5 @@
-name:                liblinear-enumerator-a
-version:             0.1.1
+name:                liblinear-enumerator
+version:             0.1.2
 synopsis:            liblinear iteratee.
 description:
   High level bindings to liblinear <http://www.csie.ntu.edu.tw/~cjlin/liblinear/>.
@@ -28,7 +28,7 @@ library
     bindings-DSL >= 1.0    && < 1.1,
     enumerator   >= 0.4.10 && < 0.5,
     mtl          >= 2      && < 3,
-    vector       >= 0.7    && < 0.8
+    vector       >= 0.9    && < 0.10
   ghc-options:
     -Wall
   extensions:

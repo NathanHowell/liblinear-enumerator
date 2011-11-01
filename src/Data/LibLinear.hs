@@ -81,8 +81,8 @@ convertModel C'model
                 weightVec = do
                   let weights = castPtr w
                       modelWeights = weights `advancePtr` i
-                  ptr <- newForeignPtr_ weights
-                  SVec.freeze $! MVec.MVector modelWeights nr_feature' ptr
+                  ptr <- newForeignPtr_ modelWeights
+                  SVec.freeze $! MVec.MVector nr_feature' ptr
 
 data TrainParams = TrainParams
   { trainSolver :: Solver
