@@ -10,12 +10,17 @@ author:              Nathan Howell <nathan.d.howell@gmail.com>
 maintainer:          Nathan Howell <nathan.d.howell@gmail.com>
 homepage:            http://github.com/NathanHowell/liblinear-enumerator
 bug-reports:         http://github.com/NathanHowell/liblinear-enumerator/issues
-category:            FFI
+category:            AI, Classification, Statistics
 
 build-type:          Simple
-cabal-version:       >= 1.2.3
+cabal-version:       >= 1.10
+
+extra-source-files:
+  cbits/COPYRIGHT
 
 library
+  default-language:
+    Haskell2010
   hs-source-dirs:
     src
   exposed-modules:
@@ -31,8 +36,9 @@ library
     vector       >= 0.9    && < 0.10
   ghc-options:
     -Wall
-  extensions:
-    ForeignFunctionInterface
+
+  build-tools:
+    hsc2hs
 
   include-dirs:
     cbits/
@@ -41,7 +47,7 @@ library
     cbits/tron.h
     cbits/blas/blas.h
     cbits/blas/blasp.h
-    
+
   c-sources:
     cbits/linear.cpp
     cbits/tron.cpp
@@ -49,8 +55,13 @@ library
     cbits/blas/dnrm2.c
     cbits/blas/ddot.c	
     cbits/blas/dscal.c
-    
+
   includes:
     cbits/linear.h
   extra-libraries:
     stdc++
+
+source-repository head
+  type:     git
+  location: https://github.com/NathanHowell/liblinear-enumerator.git
+
